@@ -1,0 +1,136 @@
+.login-home-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+}
+
+.login-home-content {
+  max-width: 1200px;
+  width: 100%;
+}
+
+.login-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 50px;
+}
+
+.login-header h1 {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  font-weight: 700;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.login-header p {
+  font-size: 1.2rem;
+  opacity: 0.9;
+}
+
+.role-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.role-card {
+  background: white;
+  border-radius: 20px;
+  padding: 40px 30px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  position: relative;
+  overflow: hidden;
+  border: 3px solid transparent;
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: var(--card-color);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover {
+  transform: translateY(-10px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+  border-color: var(--card-color);
+}
+
+.role-card:hover::before {
+  transform: scaleX(1);
+}
+
+.role-icon {
+  font-size: 4rem;
+  margin-bottom: 20px;
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover .role-icon {
+  transform: scale(1.2) rotate(5deg);
+}
+
+.role-card h2 {
+  font-size: 2rem;
+  margin-bottom: 15px;
+  color: #333;
+  font-weight: 700;
+}
+
+.role-card p {
+  color: #666;
+  font-size: 1rem;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.role-card-arrow {
+  font-size: 2rem;
+  color: var(--card-color);
+  transition: transform 0.3s ease;
+}
+
+.role-card:hover .role-card-arrow {
+  transform: translateX(10px);
+}
+
+.login-footer {
+  text-align: center;
+  color: white;
+}
+
+.login-footer a {
+  color: white;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.login-footer a:hover {
+  opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+  .login-header h1 {
+    font-size: 2rem;
+  }
+
+  .role-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .role-card {
+    padding: 30px 20px;
+  }
+}
