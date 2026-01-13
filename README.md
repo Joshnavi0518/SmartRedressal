@@ -1,6 +1,6 @@
 # AI-Based Grievance Redressal & Analytics Platform
 
-A production-ready, full-stack grievance management system built with MERN stack, JWT authentication, and AI-powered complaint analysis.
+A  full-stack grievance management system built with MERN stack, JWT authentication, and AI-powered complaint analysis.
 
 ## 🚀 Features
 
@@ -297,25 +297,7 @@ REACT_APP_API_URL=http://localhost:5000/api
 3. **CORS Errors**: Verify backend CORS settings allow frontend origin
 4. **JWT Errors**: Ensure JWT_SECRET is set in backend .env
 
-## 📦 Production Deployment
 
-For production deployment:
-
-1. Set `NODE_ENV=production` in backend
-2. Use a strong `JWT_SECRET`
-3. Configure MongoDB Atlas or production MongoDB instance
-4. Build React app: `npm run build`
-5. Use PM2 or similar for process management
-6. Set up reverse proxy (nginx) if needed
-7. Configure environment variables securely
-
-## 🤝 Contributing
-
-This is a portfolio project. Feel free to fork and enhance!
-
-## 📄 License
-
-This project is open source and available for educational purposes.
 
 ## 👨‍💻 Author
 
