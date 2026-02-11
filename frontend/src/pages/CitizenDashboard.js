@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useSocket } from '../context/SocketContext';
 import FeedbackModal from '../components/FeedbackModal';
 import './Dashboard.css';
 
 const CitizenDashboard = () => {
-  const { socket } = useSocket();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -16,68 +14,6 @@ const CitizenDashboard = () => {
   useEffect(() => {
     fetchComplaints();
   }, []);
-
-  // Listen for real-time status updates
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleStatusChange = async (data) => {
-      // Update the specific complaint in the list immediately
-      setComplaints(prevComplaints => 
-        prevComplaints.map(complaint => 
-          complaint._id === data.complaintId 
-            ? { ...complaint, status: data.status }
-            : complaint
-        )
-      );
-      
-      // Also refresh to get complete updated data
-      await fetchComplaints();
-      
-      // Show notification message
-      const statusMessages = {
-        'Submitted': 'Your complaint has been submitted',
-        'Assigned': 'Your complaint has been assigned to an officer',
-        'In Progress': '✅ Work has started on your complaint! An officer is now actively working on it.',
-        'Resolved': 'Your complaint has been resolved',
-        'Closed': 'Your complaint has been closed'
-      };
-      
-      const messageType = data.status === 'Resolved' ? 'success' : data.status === 'In Progress' ? 'success' : 'info';
-      
-      setMessage({ 
-        type: messageType, 
-        text: statusMessages[data.status] || data.message 
-      });
-      setTimeout(() => setMessage({ type: '', text: '' }), 7000);
-    };
-
-    const handleResolution = (data) => {
-      // Find the resolved complaint and show feedback modal
-      const complaint = complaints.find(c => c._id === data.complaintId);
-      if (complaint) {
-        setFeedbackComplaint({ ...complaint, resolution: data.resolution });
-      } else {
-        // Fetch if not in list
-        fetchComplaints().then(() => {
-          setTimeout(() => {
-            const updatedComplaint = complaints.find(c => c._id === data.complaintId);
-            if (updatedComplaint) {
-              setFeedbackComplaint({ ...updatedComplaint, resolution: data.resolution });
-            }
-          }, 500);
-        });
-      }
-    };
-
-    socket.on('complaint_status_changed', handleStatusChange);
-    socket.on('complaint_resolved', handleResolution);
-
-    return () => {
-      socket.off('complaint_status_changed', handleStatusChange);
-      socket.off('complaint_resolved', handleResolution);
-    };
-  }, [socket]);
 
   const fetchComplaints = async () => {
     try {

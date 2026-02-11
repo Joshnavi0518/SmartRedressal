@@ -1,6 +1,5 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from typing import Optional
 import pickle
 import os
@@ -12,7 +11,20 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 
-# Download NLTK data
+"""
+Lightweight NLP service for SmartRedressal.
+
+This Flask app does three things for every complaint:
+- cleans up the text (title + description),
+- guesses the department/category (Municipal, Healthcare, etc.),
+- estimates sentiment and urgency so we can assign a priority.
+
+It is intentionally simple, easy to read, and focused on explainability
+rather than building a perfect ML model.
+"""
+
+# Make sure the required NLTK resources are available.
+# These downloads are cached, so they only run the first time.
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -28,22 +40,15 @@ try:
 except LookupError:
     nltk.download('wordnet', quiet=True)
 
-app = FastAPI(title="Grievance AI Service", version="1.0.0")
+app = Flask(__name__)
+CORS(app)
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Initialize text preprocessing
+# Basic text‑preprocessing helpers used across the service.
 lemmatizer = WordNetLemmatizer()
-stop_words = set(stopwords.words('english'))
+stop_words = set(stopwords.words("english"))
 
-# Category keywords mapping
+# A simple, human‑readable mapping from high‑level categories
+# to the kinds of words we expect in those complaints.
 CATEGORY_KEYWORDS = {
     'Municipal': ['road', 'street', 'pothole', 'garbage', 'waste', 'drainage', 'sewage', 'streetlight', 'park', 'municipal', 'city', 'urban', 'sidewalk', 'traffic light', 'public toilet', 'public space'],
     'Healthcare': ['hospital', 'clinic', 'doctor', 'medicine', 'health', 'medical', 'treatment', 'patient', 'ambulance', 'pharmacy', 'nurse', 'healthcare', 'health care', 'heart', 'stroke', 'cardiac', 'emergency', 'surgery', 'disease', 'illness', 'symptom', 'diagnosis', 'prescription', 'medication', 'therapy', 'vaccine', 'covid', 'coronavirus', 'fever', 'pain', 'injury', 'wound', 'blood', 'cancer', 'diabetes', 'hypertension', 'asthma', 'infection', 'virus', 'bacteria'],
@@ -53,13 +58,22 @@ CATEGORY_KEYWORDS = {
     'Other': []
 }
 
-# Initialize models
+# In‑memory handles for our vectorizer and classifier.
 vectorizer = None
 classifier = None
-MODEL_DIR = 'models'
+MODEL_DIR = "models"
 
-def preprocess_text(text):
-    """Preprocess text for analysis"""
+
+def preprocess_text(text: str) -> str:
+    """
+    Clean and normalize raw text so it is ready for analysis.
+
+    Steps:
+    - lowercase
+    - strip punctuation and digits
+    - tokenize
+    - drop stopwords and lemmatize
+    """
     if not text:
         return ""
     
@@ -67,7 +81,7 @@ def preprocess_text(text):
     text = text.lower()
     
     # Remove special characters and digits
-    text = re.sub(r'[^a-zA-Z\s]', '', text)
+    text = re.sub(r"[^a-zA-Z\s]", "", text)
     
     # Tokenize
     tokens = word_tokenize(text)
@@ -75,13 +89,21 @@ def preprocess_text(text):
     # Remove stopwords and lemmatize
     tokens = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
     
-    return ' '.join(tokens)
+    return " ".join(tokens)
 
-def train_category_classifier():
-    """Train a simple category classifier using keyword matching and TF-IDF"""
+
+def train_category_classifier() -> None:
+    """
+    Train a tiny text classifier to roughly separate complaints into categories.
+
+    We deliberately keep the training data simple and transparent by
+    building it from the keyword lists above instead of loading a large,
+    opaque dataset. The goal is to demonstrate the pipeline, not to
+    ship a production‑grade model.
+    """
     global vectorizer, classifier
     
-    # Training data based on keywords
+    # Build a synthetic training set from our keyword lists.
     training_texts = []
     training_labels = []
     
@@ -92,34 +114,39 @@ def train_category_classifier():
                 training_texts.append(keyword)
                 training_labels.append(category)
     
-    # Add some generic examples
-    training_texts.extend(['general issue', 'other problem', 'miscellaneous'])
-    training_labels.extend(['Other', 'Other', 'Other'])
+    # Add some generic "other" examples so the model has a fallback.
+    training_texts.extend(["general issue", "other problem", "miscellaneous"])
+    training_labels.extend(["Other", "Other", "Other"])
     
-    # Vectorize
+    # Turn text into numeric features.
     vectorizer = TfidfVectorizer(max_features=1000, ngram_range=(1, 2))
     X = vectorizer.fit_transform(training_texts)
     
-    # Train classifier
+    # Train a simple linear classifier.
     classifier = LogisticRegression(max_iter=1000, random_state=42)
     classifier.fit(X, training_labels)
     
-    # Save models
+    # Persist the trained model so we do not retrain on every startup.
     os.makedirs(MODEL_DIR, exist_ok=True)
-    with open(f'{MODEL_DIR}/vectorizer.pkl', 'wb') as f:
+    with open(f"{MODEL_DIR}/vectorizer.pkl", "wb") as f:
         pickle.dump(vectorizer, f)
-    with open(f'{MODEL_DIR}/classifier.pkl', 'wb') as f:
+    with open(f"{MODEL_DIR}/classifier.pkl", "wb") as f:
         pickle.dump(classifier, f)
 
-def load_models():
-    """Load pre-trained models or train new ones"""
+def load_models() -> None:
+    """
+    Load models from disk if available; otherwise train them from scratch.
+
+    This keeps startup fast in normal use but still lets the service
+    recover automatically if the model files are missing or corrupted.
+    """
     global vectorizer, classifier
     
     try:
-        if os.path.exists(f'{MODEL_DIR}/vectorizer.pkl') and os.path.exists(f'{MODEL_DIR}/classifier.pkl'):
-            with open(f'{MODEL_DIR}/vectorizer.pkl', 'rb') as f:
+        if os.path.exists(f"{MODEL_DIR}/vectorizer.pkl") and os.path.exists(f"{MODEL_DIR}/classifier.pkl"):
+            with open(f"{MODEL_DIR}/vectorizer.pkl", "rb") as f:
                 vectorizer = pickle.load(f)
-            with open(f'{MODEL_DIR}/classifier.pkl', 'rb') as f:
+            with open(f"{MODEL_DIR}/classifier.pkl", "rb") as f:
                 classifier = pickle.load(f)
         else:
             train_category_classifier()
@@ -127,15 +154,20 @@ def load_models():
         print(f"Error loading models: {e}. Training new models...")
         train_category_classifier()
 
-def classify_category(text):
-    """Classify complaint category"""
+def classify_category(text: str):
+    """
+    Guess which high‑level category a complaint belongs to.
+
+    First we try a very transparent keyword‑based approach.
+    If that is inconclusive, we fall back to the ML model.
+    """
     if not text:
         return 'Other', 0.5
     
     # Preprocess
     processed_text = preprocess_text(text)
     
-    # Keyword-based classification (prioritize this for accuracy)
+    # Keyword‑based classification (prioritize this for interpretability).
     text_lower = text.lower()
     category_scores = {}
     
@@ -144,7 +176,7 @@ def classify_category(text):
         if score > 0:
             category_scores[category] = score
     
-    # If we have strong keyword matches, use them (more reliable than ML)
+    # If we have strong keyword matches, trust them over the ML model.
     if category_scores:
         best_category = max(category_scores, key=category_scores.get)
         best_score = category_scores[best_category]
@@ -154,12 +186,11 @@ def classify_category(text):
             confidence = min(best_score / 5.0, 1.0)
             return best_category, confidence
         
-        # If single keyword match, still use it but with lower confidence
-        # Then check ML model as secondary
+        # If there is only a weak match, keep it but also consult the model.
         keyword_category = best_category
         keyword_confidence = min(best_score / 3.0, 0.7)
     
-    # Use ML model if available (as secondary check)
+    # Use the ML model if it is loaded.
     ml_category = None
     ml_confidence = 0.0
     if vectorizer and classifier:
@@ -170,7 +201,8 @@ def classify_category(text):
         except:
             pass
     
-    # Decision logic: prefer keyword match if strong, otherwise use ML if confident
+    # Decision logic: prefer strong keyword signals, otherwise trust ML
+    # only when it is reasonably confident.
     if category_scores and best_score >= 2:
         return keyword_category, keyword_confidence
     elif ml_category and ml_confidence > 0.6:
@@ -182,8 +214,13 @@ def classify_category(text):
     
     return 'Other', 0.5
 
-def analyze_sentiment(text):
-    """Analyze sentiment (simple rule-based approach)"""
+def analyze_sentiment(text: str) -> str:
+    """
+    Very small, rule‑based sentiment checker.
+
+    Looks for a handful of positive and negative keywords and
+    returns "Positive", "Neutral" or "Negative".
+    """
     if not text:
         return 'Neutral'
     
@@ -207,8 +244,15 @@ def analyze_sentiment(text):
     else:
         return 'Neutral'
 
-def determine_priority(text, sentiment, category):
-    """Determine priority based on sentiment and keywords"""
+def determine_priority(text: str, sentiment: str, category: str) -> str:
+    """
+    Derive a rough priority level for the complaint.
+
+    We combine:
+    - explicit urgency words in the text,
+    - how negative the sentiment is,
+    - and whether the domain is safety‑critical (health, utilities).
+    """
     text_lower = text.lower()
     
     # High priority keywords
@@ -231,46 +275,42 @@ def determine_priority(text, sentiment, category):
     else:
         return 'Low'
 
-# Initialize models on startup
-@app.on_event("startup")
-async def startup_event():
+
+def init_models() -> None:
+    """Convenience wrapper so the `__main__` block stays clean."""
     load_models()
     print("✅ AI Service initialized")
 
-# Request/Response models
-class ComplaintRequest(BaseModel):
-    title: str
-    description: str
-
-class AnalysisResponse(BaseModel):
-    category: str
-    sentiment: str
-    priority: str
-    confidence: Optional[float] = 0.8
 
 # Health check
-@app.get("/")
-async def root():
-    return {"message": "Grievance AI Service is running", "status": "OK"}
+@app.route("/", methods=["GET"])
+def root():
+    return jsonify({"message": "Grievance AI Service is running", "status": "OK"})
 
-@app.get("/api/health")
-async def health():
-    return {"status": "OK", "service": "AI Analysis Service"}
+
+@app.route("/api/health", methods=["GET"])
+def health():
+    return jsonify({"status": "OK", "service": "AI Analysis Service"})
+
 
 # Analyze complaint endpoint
-@app.post("/api/analyze", response_model=AnalysisResponse)
-async def analyze_complaint(request: ComplaintRequest):
+@app.route("/api/analyze", methods=["POST"])
+def analyze_complaint():
     try:
+        data = request.get_json() or {}
+        title = data.get("title", "")
+        description = data.get("description", "")
+
         # Combine title and description
-        full_text = f"{request.title} {request.description}"
+        full_text = f"{title} {description}"
         
         # Classify category
         category, confidence = classify_category(full_text)
         
         # Debug logging
         print(f"📋 Complaint Analysis:")
-        print(f"   Title: {request.title}")
-        print(f"   Description: {request.description[:100]}...")
+        print(f"   Title: {title}")
+        print(f"   Description: {description[:100]}...")
         print(f"   Classified Category: {category} (confidence: {confidence:.2f})")
         
         # Analyze sentiment
@@ -281,16 +321,19 @@ async def analyze_complaint(request: ComplaintRequest):
         
         print(f"   Sentiment: {sentiment}, Priority: {priority}")
         
-        return AnalysisResponse(
-            category=category,
-            sentiment=sentiment,
-            priority=priority,
-            confidence=round(confidence, 2)
+        return jsonify(
+            {
+                "category": category,
+                "sentiment": sentiment,
+                "priority": priority,
+                "confidence": round(confidence, 2),
+            }
         )
     except Exception as e:
         print(f"❌ Analysis error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
+        return jsonify({"detail": f"Analysis error: {str(e)}"}), 500
+
 
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    init_models()
+    app.run(host="0.0.0.0", port=8000)

@@ -1,20 +1,23 @@
-# AI-Based Grievance Redressal & Analytics Platform
+# SmartRedressal – AI-Assisted Grievance Redressal (MERN + Python/NLTK)
 
-A  full-stack grievance management system built with MERN stack, JWT authentication, and AI-powered complaint analysis.
+SmartRedressal is a full‑stack grievance management system where citizens can raise complaints,
+officers can work on them, and admins can monitor what is happening in the system.
+Under the hood it uses the MERN stack plus a small Python/NLTK service to analyze complaint text.
 
-## 🚀 Features
 
-- **JWT Authentication** with role-based access control (Citizen, Officer, Admin)
-- **AI-Powered Analysis** using NLP for:
-  - Automatic complaint category classification
-  - Sentiment analysis
-  - Priority detection
-- **Citizen Dashboard**: Submit and track complaints
-- **Officer Dashboard**: Manage assigned complaints and update status
-- **Admin Dashboard**: Comprehensive analytics and monitoring
-- **RESTful API** with Express.js
-- **MongoDB** database with proper schema design
-- **Modern React UI** with responsive design
+
+## 🚀 What the project does
+
+- **Secure login with JWT** and role‑based access (Citizen, Officer, Admin)
+- **AI‑assisted complaint analysis** using NLP to:
+  - guess the complaint category (Municipal, Healthcare, Education, etc.)
+  - estimate sentiment (Positive / Neutral / Negative)
+  - derive a priority (Low / Medium / High / Critical)
+- **Citizen dashboard** to submit complaints and track their status over time
+- **Officer dashboard** to view department‑specific complaints, assign and resolve them
+- **Admin dashboard** with basic analytics and recent‑complaints overview
+- **RESTful API** built with Express.js and MongoDB/Mongoose
+- **Modern React UI** with a simple, responsive layout
 
 ## 📁 Project Structure
 
@@ -33,31 +36,32 @@ new_project/
 │   │   ├── context/     # React context
 │   │   └── services/    # API service
 │   └── public/
-└── ai-service/          # Python FastAPI service
-    ├── app.py           # FastAPI application
+└── ai-service/          # Python Flask + NLTK service
+    ├── app.py           # Flask application
     └── models/          # ML models (generated)
 ```
 
-## 🛠️ Tech Stack
+## 🛠️ Tech Stack (at a glance)
 
-### Backend
+### Backend (API)
 - Node.js + Express.js
 - MongoDB + Mongoose
-- JWT (jsonwebtoken)
-- bcryptjs for password hashing
-- Axios for AI service communication
+- JWT (`jsonwebtoken`) for authentication
+- `bcryptjs` for password hashing
+- `express-validator` for input validation
+- `axios` for talking to the Python AI service
 
-### Frontend
-- React 18
-- React Router DOM
-- Axios
-- Context API for state management
+### Frontend (Web App)
+- React 18 (Create React App)
+- React Router DOM (role‑based routing)
+- Axios (HTTP client)
+- React Context API for auth state (`AuthContext`)
 
-### AI Service
+### AI Service (NLP helper)
 - Python 3.8+
-- FastAPI
-- scikit-learn (TF-IDF + Logistic Regression)
-- NLTK for text preprocessing
+- Flask + Flask‑CORS
+- scikit‑learn (TF‑IDF + Logistic Regression)
+- NLTK for tokenization, stopwords, lemmatization
 
 ## 📋 Prerequisites
 
@@ -66,7 +70,7 @@ new_project/
 - Python 3.8 or higher
 - npm or yarn
 
-## 🔧 Installation & Setup
+## 🔧 Installation & setup
 
 ### 1. Clone the repository
 
@@ -74,25 +78,25 @@ new_project/
 cd new_project
 ```
 
-### 2. Backend Setup
+### 2. Backend setup (Express + MongoDB)
 
 ```bash
 cd backend
 npm install
 ```
 
-Create a `.env` file in the `backend` directory:
+Create a `.env` file in the `backend` directory (never commit this file to Git):
 
 ```env
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/grievance_db
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
+JWT_SECRET=change_me_to_a_long_random_secret
 JWT_EXPIRE=7d
 AI_SERVICE_URL=http://localhost:8000
 NODE_ENV=development
 ```
 
-### 3. AI Service Setup
+### 3. AI service setup (Python + NLTK)
 
 ```bash
 cd ai-service
@@ -107,7 +111,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 4. Frontend Setup
+### 4. Frontend setup (React)
 
 ```bash
 cd frontend
@@ -120,7 +124,7 @@ Create a `.env` file in the `frontend` directory:
 REACT_APP_API_URL=http://localhost:5000/api
 ```
 
-## 🚀 Running the Application
+## 🚀 Running the application
 
 ### 1. Start MongoDB
 
@@ -134,7 +138,7 @@ Make sure MongoDB is running on your system:
 mongod
 ```
 
-### 2. Start AI Service
+### 2. Start the AI service
 
 ```bash
 cd ai-service
@@ -144,7 +148,7 @@ python app.py
 
 The AI service will run on `http://localhost:8000`
 
-### 3. Start Backend Server
+### 3. Start the backend server
 
 ```bash
 cd backend
@@ -155,7 +159,7 @@ npm start
 
 The backend will run on `http://localhost:5000`
 
-### 4. Start Frontend
+### 4. Start the frontend
 
 ```bash
 cd frontend
@@ -164,9 +168,10 @@ npm start
 
 The frontend will run on `http://localhost:3000`
 
-## 👤 User Roles & Registration
+## 👤 User roles & registration flow
 
-The platform supports three user roles with separate login pages:
+The platform supports three user roles with separate login pages and slightly
+different dashboards:
 
 1. **Citizen** (`/login` or `/citizen-login`): Can submit and track complaints
 2. **Officer** (`/officer-login`): Can view and manage complaints from their department
@@ -180,16 +185,16 @@ The platform supports three user roles with separate login pages:
    - Officers are automatically assigned to the department matching their selected domain
 3. **Admin** (`/admin-login`): Can view analytics and manage the system
 
-### Registration Process
+### Registration process
 
-- **Citizens**: Simple registration with name, email, password
+- **Citizens**: Simple registration with name, email, and password.
 - **Officers**: Must select a domain/department during registration. The system will:
   - Find or create a department for that domain
   - Assign the officer to that department
   - Allow them to see unassigned complaints from their department
 - **Admins**: Standard registration (no domain required)
 
-## 📡 API Endpoints
+## 📡 API endpoints (high‑level)
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
@@ -219,11 +224,12 @@ The platform supports three user roles with separate login pages:
 ### AI Service
 - `POST /api/analyze` - Analyze complaint (used internally)
 
-## 🧠 AI Analysis
+## 🧠 How the AI analysis works
 
-The AI service automatically analyzes each complaint:
+For each complaint, the AI service receives the title and description as plain text.
+It cleans the text, runs it through a small classifier, and sends back a summary:
 
-1. **Category Classification**: Uses TF-IDF + Logistic Regression to classify complaints into:
+1. **Category classification**: Uses TF‑IDF + Logistic Regression (plus keyword rules) to classify complaints into:
    - Municipal
    - Healthcare
    - Education
@@ -231,25 +237,23 @@ The AI service automatically analyzes each complaint:
    - Utilities
    - Other
 
-2. **Sentiment Analysis**: Rule-based sentiment detection (Positive/Neutral/Negative)
+2. **Sentiment analysis**: A simple, rule‑based sentiment detector (Positive / Neutral / Negative).
 
-3. **Priority Detection**: Determines priority (Low/Medium/High/Critical) based on:
+3. **Priority detection**: Derives a priority (Low / Medium / High / Critical) based on:
    - Sentiment
    - Category
    - Keywords (urgent, emergency, etc.)
 
-## 🔐 Security Features
+## 🔐 Security features (backend)
 
-- JWT-based authentication
-- Password hashing with bcrypt
-- Role-based access control (RBAC)
-- Protected routes
-- Input validation
-- Error handling middleware
+- JWT‑based authentication with access tokens
+- Password hashing with `bcryptjs`
+- Role‑based access control (RBAC) for routes
+- Protected API endpoints behind `protect` / `authorize` middleware
+- Input validation with `express-validator`
+- Centralized error‑handling middleware
 
-## 📊 Database Schema
-
-### Collections
+## 📊 Database schema (MongoDB collections)
 
 1. **Users**: name, email, password, role, department (auto-assigned for officers based on domain), phone, address
 2. **Complaints**: title, description, category, status, priority, sentiment, citizen, assignedOfficer, department, location, resolution, aiAnalysis
@@ -259,8 +263,8 @@ The AI service automatically analyzes each complaint:
 ## 🎨 Frontend Features
 
 - Responsive design
-- Role-based routing
-- Real-time complaint tracking
+- Role-based routing (Citizen, Officer, Admin)
+- Complaint submission and tracking
 - Status updates
 - Analytics dashboard
 - Clean, professional UI

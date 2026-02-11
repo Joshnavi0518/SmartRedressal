@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useContext } from 'react';
 import api from '../services/api';
 import { AuthContext } from '../context/AuthContext';
-import { useSocket } from '../context/SocketContext';
 import './Dashboard.css';
 
 const OfficerDashboard = () => {
   const { user } = useContext(AuthContext);
-  const { socket } = useSocket();
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedComplaint, setSelectedComplaint] = useState(null);
@@ -16,31 +14,6 @@ const OfficerDashboard = () => {
   useEffect(() => {
     fetchComplaints();
   }, []);
-
-  // Listen for real-time updates
-  useEffect(() => {
-    if (!socket) return;
-
-    const handleNewAssignment = async (data) => {
-      await fetchComplaints();
-      setMessage({ type: 'info', text: data.message });
-      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
-    };
-
-    const handleNewComplaint = async (data) => {
-      await fetchComplaints();
-      setMessage({ type: 'info', text: data.message });
-      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
-    };
-
-    socket.on('new_assignment', handleNewAssignment);
-    socket.on('new_complaint', handleNewComplaint);
-
-    return () => {
-      socket.off('new_assignment', handleNewAssignment);
-      socket.off('new_complaint', handleNewComplaint);
-    };
-  }, [socket]);
 
   const fetchComplaints = async () => {
     try {

@@ -2,15 +2,12 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const http = require('http');
 const errorHandler = require('./middleware/errorHandler');
-const { initializeSocket } = require('./socket/socketServer');
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const server = http.createServer(app);
 
 // Middleware
 app.use(cors());
@@ -33,9 +30,6 @@ app.get('/api/health', (req, res) => {
 // Error handling middleware
 app.use(errorHandler);
 
-// Initialize Socket.io
-initializeSocket(server);
-
 // Connect to MongoDB
 mongoose
   .connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/grievance_db', {
@@ -45,9 +39,8 @@ mongoose
   .then(() => {
     console.log('✅ MongoDB connected');
     const PORT = process.env.PORT || 5000;
-    server.listen(PORT, () => {
+    app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🔌 Socket.io initialized`);
     });
   })
   .catch((err) => {
@@ -55,4 +48,4 @@ mongoose
     process.exit(1);
   });
 
-module.exports = { app, server };
+module.exports = app;

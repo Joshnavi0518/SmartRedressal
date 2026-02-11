@@ -4,13 +4,6 @@ const Complaint = require('../models/Complaint');
 const Department = require('../models/Department');
 const { protect, authorize } = require('../middleware/auth');
 const { analyzeComplaint } = require('../utils/aiService');
-const { 
-  notifyNewComplaint, 
-  notifyStatusChange, 
-  notifyNewAssignment,
-  notifyPriorityEscalation,
-  notifyResolution
-} = require('../utils/notifications');
 
 const router = express.Router();
 
@@ -99,14 +92,6 @@ router.post(
 
       await complaint.populate('citizen', 'name email');
       await complaint.populate('department', 'name category');
-
-      // Notify department officers of new complaint
-      notifyNewComplaint(complaint._id);
-
-      // Notify admin if high priority
-      if (complaint.priority === 'High' || complaint.priority === 'Critical') {
-        notifyPriorityEscalation(complaint._id);
-      }
 
       res.status(201).json({
         success: true,
@@ -313,14 +298,6 @@ router.put(
       await complaint.populate('citizen', 'name email');
       await complaint.populate('department', 'name category');
 
-      // Notify officer of new assignment
-      if (officerId) {
-        notifyNewAssignment(complaint._id, officerId);
-      }
-
-      // Notify citizen of assignment
-      notifyStatusChange(complaint._id, 'Assigned');
-
       res.json({
         success: true,
         complaint,
@@ -390,21 +367,6 @@ router.put(
 
       await complaint.populate('assignedOfficer', 'name email');
       await complaint.populate('citizen', 'name email');
-
-      // Notify citizen of status change
-      if (oldStatus !== req.body.status) {
-        notifyStatusChange(complaint._id, req.body.status);
-        
-        // If resolved, notify for feedback
-        if (req.body.status === 'Resolved') {
-          notifyResolution(complaint._id);
-        }
-      }
-
-      // Notify admin if priority escalation
-      if (complaint.priority === 'High' || complaint.priority === 'Critical') {
-        notifyPriorityEscalation(complaint._id);
-      }
 
       res.json({
         success: true,

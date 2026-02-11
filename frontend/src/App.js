@@ -1,7 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
-import { SocketProvider } from './context/SocketContext';
 import PrivateRoute from './components/PrivateRoute';
 import Navbar from './components/Navbar';
 import LoginHome from './pages/LoginHome';
@@ -18,11 +17,10 @@ import './App.css';
 function App() {
   return (
     <AuthProvider>
-      <SocketProvider>
-        <Router>
-          <div className="App">
-            <Navbar />
-            <Routes>
+      <Router>
+        <div className="App">
+          <Navbar />
+          <Routes>
             <Route path="/login" element={<LoginHome />} />
             <Route path="/citizen-login" element={<CitizenLogin />} />
             <Route path="/officer-login" element={<OfficerLogin />} />
@@ -54,10 +52,9 @@ function App() {
             />
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/old-login" element={<Login />} />
-            </Routes>
-          </div>
-        </Router>
-      </SocketProvider>
+          </Routes>
+        </div>
+      </Router>
     </AuthProvider>
   );
 }

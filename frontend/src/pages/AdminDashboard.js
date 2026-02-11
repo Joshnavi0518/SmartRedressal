@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
-import { useSocket } from '../context/SocketContext';
 import './Dashboard.css';
 
 const AdminDashboard = () => {
-  const { socket } = useSocket();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
@@ -12,23 +10,6 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchStats();
   }, []);
-
-  // Listen for priority escalations
-  useEffect(() => {
-    if (!socket) return;
-
-    const handlePriorityEscalation = async (data) => {
-      await fetchStats(); // Refresh stats
-      // Show alert or notification
-      alert(`Priority Escalation: ${data.message}`);
-    };
-
-    socket.on('priority_escalation', handlePriorityEscalation);
-
-    return () => {
-      socket.off('priority_escalation', handlePriorityEscalation);
-    };
-  }, [socket]);
 
   const fetchStats = async () => {
     try {
